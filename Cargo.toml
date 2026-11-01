@@ -36,7 +36,7 @@ tokio = { version = "1.53.1", features = ["macros", "rt", "sync", "time", "rt-mu
 unicode-segmentation = "=1.13.3"
 unicode-width = "=0.2.2"
 uuid = { version = "1.24.0", features = ["v4", "serde"] }
-webpki-root-certs = "=1.0.9"
+webpki-root-certs = "=1.0.11"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
