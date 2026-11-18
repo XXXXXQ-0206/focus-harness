@@ -332,26 +332,23 @@ pub fn hash_file(path: &Path) -> Result<(String, u64), io::Error> {
         hasher.update(&buffer[..read]);
         size = size.saturating_add(read as u64);
     }
-    Ok((format!("{:x}", hasher.finalize()), size))
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut hash = String::with_capacity(HASH_HEX_BYTES);
+    for byte in hasher.finalize() {
+        hash.push(char::from(HEX[usize::from(byte >> 4)]));
+        hash.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    Ok((hash, size))
 }
 
 #[cfg(test)]
 mod tests {
     use super::{UpdateArtifact, UpdateManifest, VersionedArtifactStore};
-    use std::{
-        fs,
-        path::PathBuf,
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::{fs, path::PathBuf};
+    use uuid::Uuid;
 
     fn fixture() -> (PathBuf, VersionedArtifactStore, PathBuf) {
-        let root = std::env::temp_dir().join(format!(
-            "focus-update-test-{}",
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        let root = std::env::temp_dir().join(format!("focus-update-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&root).unwrap();
         let store = VersionedArtifactStore::new(root.join("updates"));
         let source = root.join("focus.exe");
@@ -366,7 +363,10 @@ mod tests {
         assert_eq!(artifact.version, "v1");
         assert_eq!(artifact.commit, "abc123");
         assert_eq!(artifact.size, 8);
-        assert_eq!(artifact.sha256.len(), 64);
+        assert_eq!(
+            artifact.sha256,
+            "bf7737b9360a53d72f0a5a2dac7f1b3b59ad96023a375601f0877813a655a9ce"
+        );
         store.verify(&artifact).unwrap();
         assert_eq!(store.load_staged().unwrap(), Some(artifact));
         fs::remove_dir_all(root).unwrap();
